@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext
     {
         base.OnModelCreating(builder);
 
+
         // TODO: Ajouter des channels dans le seed
 
         builder.Entity<Channel>().HasData(new Channel[]

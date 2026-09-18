@@ -21,6 +21,7 @@ namespace signalr.backend.Hubs
     {
         public ApplicationDbContext _context;
 
+
         public IdentityUser CurentUser
         {
             get
@@ -34,12 +35,14 @@ namespace signalr.backend.Hubs
         public ChatHub(ApplicationDbContext context)
         {
             _context = context;
+
         }
 
         public async override Task OnConnectedAsync()
         {
             UserHandler.UserConnections.Add(CurentUser.UserName!, Context.UserIdentifier);
-            
+            await Clients.All.SendAsync("UsersList", UserHandler.UserConnections.ToList());
+            await Clients.Caller.SendAsync("ChannelsList", _context.Channel.ToList());
             // TODO: Envoyer des message aux clients pour les mettre à jour
         }
 
@@ -48,8 +51,10 @@ namespace signalr.backend.Hubs
             // Lors de la fermeture de la connexion, on met à jour notre dictionnary d'utilisateurs connectés
             KeyValuePair<string, string> entrie = UserHandler.UserConnections.SingleOrDefault(uc => uc.Value == Context.UserIdentifier);
             UserHandler.UserConnections.Remove(entrie.Key);
-            
+
             // TODO: Envoyer un message aux clients pour les mettre à jour
+            await Clients.All.SendAsync("UsersList", UserHandler.UserConnections.ToList());
+
         }
 
         public async Task CreateChannel(string title)
@@ -58,6 +63,8 @@ namespace signalr.backend.Hubs
             await _context.SaveChangesAsync();
 
             // TODO: Envoyer un message aux clients pour les mettre à jour
+            await Clients.All.SendAsync("ChannelsList", _context.Channel.ToList());
+
         }
 
         public async Task DeleteChannel(int channelId)
@@ -71,6 +78,10 @@ namespace signalr.backend.Hubs
             }
             string groupName = CreateChannelGroupName(channelId);
             // Envoyer les messages nécessaires aux clients
+            await Clients.Group(groupName).SendAsync("NewMessage", "[" + channel.Title + "] a été détruit");
+            await Clients.Group(groupName).SendAsync("LeaveChannel");
+            await Clients.All.SendAsync("ChannelsList", _context.Channel.ToList());
+
         }
 
         public async Task JoinChannel(int oldChannelId, int newChannelId)
@@ -78,19 +89,43 @@ namespace signalr.backend.Hubs
             string userTag = "[" + CurentUser.Email! + "]";
 
             // TODO: Faire quitter le vieux canal à l'utilisateur
+            //string oldname = _context.Channel.Where(c => c.Id == oldChannelId).Select(c => c.Title).FirstOrDefault();
+             if (oldChannelId > 0)
+            {
+                string oldGroupName = CreateChannelGroupName(oldChannelId);
+                Channel channel = _context.Channel.Find(oldChannelId);
+                string message = userTag + " quitte: " + channel.Title;
+                await Clients.Group(oldGroupName).SendAsync("NewMessage", message);
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldGroupName);
+            }
 
             // TODO: Faire joindre le nouveau canal à l'utilisateur
+            if (newChannelId > 0)
+            {
+                string newGroupName = CreateChannelGroupName(newChannelId);
+                await Groups.AddToGroupAsync(Context.ConnectionId, newGroupName);
+
+                Channel channel = _context.Channel.Find(newChannelId);
+                string message = userTag + " a rejoint : " + channel.Title;
+                await Clients.Group(newGroupName).SendAsync("NewMessage", message);
+            }
         }
 
         public async Task SendMessage(string message, int channelId, string userId)
         {
             if (userId != null)
             {
+
+                string fullmessage = "[De: " + CurentUser + "] " + message;
+                await Clients.User(userId).SendAsync("NewMessage", fullmessage);
                 // TODO: Envoyer le message à cet utilisateur
             }
             else if (channelId != 0)
             {
+                string groupName = CreateChannelGroupName(channelId);
+                Channel channel = _context.Channel.Find(channelId);
                 // TODO: Envoyer le message aux utilisateurs connectés à ce canal
+                await Clients.Group(groupName).SendAsync("NewMessage", "[" + channel.Title + "] " + message);
             }
             else
             {
