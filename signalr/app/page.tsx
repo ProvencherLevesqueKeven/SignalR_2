@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr"
 
 import { Button, BorderedContainer, LoginView } from "ui-exercices-5w5"
@@ -14,7 +14,11 @@ export default function Home() {
 
   const [hubConnection, setHubConnection] = useState<HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  
+
+  const handleConnected = useCallback(() => {
+    console.log("Connecté au Hub");
+    setIsConnected(true);
+  }, []);
 
   function connectToHub() {
     const newHubConnection = new HubConnectionBuilder()
@@ -23,14 +27,9 @@ export default function Home() {
                               .configureLogging(LogLevel.Information)
                               .build();
 
-    newHubConnection
-      .start()
-      .then(() => {
-        console.log("Connecté au Hub");
-        setIsConnected(true);
-      })
-      .catch(err => console.log('Error while starting connection: ' + err))
-
+    // On ne démarre pas la connexion ici : ChatComponent enregistre d'abord
+    // ses handlers .on(...) puis démarre la connexion, pour ne manquer aucun
+    // message envoyé par le serveur juste après la connexion au Hub.
     setHubConnection(newHubConnection);
   }
 
@@ -44,7 +43,7 @@ export default function Home() {
   }
 
   function RenderContent(){
-    if(!isConnected){
+    if(!hubConnection){
       return (
         <div>
           <div >Pas connecté au Hub..</div>
@@ -56,8 +55,8 @@ export default function Home() {
     else{
       return (
         <div>
-          <div>Connecté!</div>
-          <ChatComponent hubConnection={hubConnection} />
+          <div>{isConnected ? "Connecté!" : "Connexion en cours..."}</div>
+          <ChatComponent hubConnection={hubConnection} onConnected={handleConnected} />
         </div>
       );
     }

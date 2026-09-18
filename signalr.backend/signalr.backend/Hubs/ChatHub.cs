@@ -38,7 +38,7 @@ namespace signalr.backend.Hubs
 
         public async override Task OnConnectedAsync()
         {
-            UserHandler.UserConnections.Add(CurentUser.Email!, Context.UserIdentifier);
+            UserHandler.UserConnections.Add(CurentUser.UserName!, Context.UserIdentifier);
 
             // TODO: Envoyer des message aux clients pour les mettre à jour
             await Clients.All.SendAsync("UsersList", UserHandler.UserConnections.ToList());
