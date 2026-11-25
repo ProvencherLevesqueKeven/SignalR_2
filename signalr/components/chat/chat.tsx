@@ -90,7 +90,7 @@ export default function ChatComponent({ hubConnection, onConnected }: ChatCompon
     if (!hubConnection || !message.trim()) return;
 
     const selectedChannelId = selectedChannel ? selectedChannel.id : 0;
-    hubConnection.invoke('SendMessage', message, selectedChannelId, selectedUser?.value);
+    hubConnection.invoke('SendMessage', message, selectedChannelId, selectedUser?.value.userId);
     setMessage('');
   }
 

@@ -9,9 +9,15 @@ namespace signalr.backend.Hubs
 {
     // On garde en mémoire les connexions actives (clé: email, valeur: userId)
     // Note: Ce n'est pas nécessaire dans le TP
+    public class UserData
+    {
+        public string UserId { get; set; }
+        public int NbConnexions { get; set; }
+    }
     public static class UserHandler
     {
-        public static Dictionary<string, string> UserConnections { get; set; } = new Dictionary<string, string>();
+       // public static Dictionary<string, string> UserConnections { get; set; } = new Dictionary<string, string>();
+        public static Dictionary<string, UserData> UserConnections { get; set; } = new Dictionary<string, UserData>();
     }
 
     // L'annotation Authorize fonctionne de la même façon avec SignalR qu'avec Web API
@@ -38,9 +44,27 @@ namespace signalr.backend.Hubs
 
         }
 
+        private void AugmenterNbConnexions()
+        {
+            if (!UserHandler.UserConnections.ContainsKey(CurentUser.UserName!))
+            {
+                UserHandler.UserConnections[CurentUser.UserName!] = new UserData() { UserId = Context.UserIdentifier! };
+            }
+            UserHandler.UserConnections[CurentUser.UserName!].NbConnexions++;
+        }
+
+        private void ReduireNbConnexions()
+        {
+            UserData data = UserHandler.UserConnections[CurentUser.UserName!];
+            data.NbConnexions--;
+            if (data.NbConnexions == 0)
+                UserHandler.UserConnections.Remove(CurentUser.UserName!);
+        }
+
         public async override Task OnConnectedAsync()
         {
-            UserHandler.UserConnections.Add(CurentUser.UserName!, Context.UserIdentifier);
+            // UserHandler.UserConnections.Add(CurentUser.UserName!, Context.UserIdentifier);
+            AugmenterNbConnexions();
             await Clients.All.SendAsync("UsersList", UserHandler.UserConnections.ToList());
             await Clients.Caller.SendAsync("ChannelsList", _context.Channel.ToList());
             // TODO: Envoyer des message aux clients pour les mettre à jour
@@ -49,8 +73,9 @@ namespace signalr.backend.Hubs
         public async override Task OnDisconnectedAsync(Exception? exception)
         {
             // Lors de la fermeture de la connexion, on met à jour notre dictionnary d'utilisateurs connectés
-            KeyValuePair<string, string> entrie = UserHandler.UserConnections.SingleOrDefault(uc => uc.Value == Context.UserIdentifier);
-            UserHandler.UserConnections.Remove(entrie.Key);
+            //KeyValuePair<string, string> entrie = UserHandler.UserConnections.SingleOrDefault(uc => uc.Value == Context.UserIdentifier);
+            //UserHandler.UserConnections.Remove(entrie.Key);
+            ReduireNbConnexions();
 
             // TODO: Envoyer un message aux clients pour les mettre à jour
             await Clients.All.SendAsync("UsersList", UserHandler.UserConnections.ToList());
@@ -126,8 +151,9 @@ namespace signalr.backend.Hubs
                 Channel channel = _context.Channel.Find(channelId);
                 // TODO: Envoyer le message aux utilisateurs connectés à ce canal
                 channel.NbMessages++;
-                await _context.SaveChangesAsync();
-                await Clients.Group(groupName).SendAsync("NewMessage", "[" + channel.Title + "] " + message);
+                await _context.SaveChangesAsync(); 
+                //  await Clients.Group(groupName).SendAsync("NewMessage", "[" + channel.Title + "] " + message);
+                await Clients.Group(groupName).SendAsync("NewMessage", "[" + CurentUser.Email! + "] " + message);
                 await Clients.All.SendAsync("NombreMessage", channelId, channel.NbMessages);
             }
             else
