@@ -22,10 +22,13 @@ namespace signalr.backend.Services
                 using (IServiceScope scope = _serviceScopeFactory.CreateScope())
                 {
                     ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
+                    int nbMessagesOfMostPopularChannels = 0;
                     // On trouve le nombre de message du canal le plus populaire (il pourrait y en avoir plusieurs avec le même nombre)
-                    int nbMessagesOfMostPopularChannels = dbContext.Channel.Select(c => c.NbMessages).Max();
-
+                    try
+                    {
+                        nbMessagesOfMostPopularChannels = dbContext.Channel.Select(c => c.NbMessages).Max();
+                    }
+                    catch (Exception e) { };
                     if (nbMessagesOfMostPopularChannels > 0)
                     {
                         // On fait une requête pour les channels qui ont AU MOINS cette quantité.
