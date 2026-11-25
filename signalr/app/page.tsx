@@ -14,7 +14,7 @@ export default function Home() {
 
   const [hubConnection, setHubConnection] = useState<HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  
+
   const handleConnected = useCallback(() => {
     console.log("Connecté au Hub");
     setIsConnected(true);

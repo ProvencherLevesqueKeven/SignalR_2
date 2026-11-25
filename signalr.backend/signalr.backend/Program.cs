@@ -1,11 +1,12 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using signalr.backend.Data;
 using signalr.backend.Hubs;
-using System.Text;
+using signalr.backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,6 +107,8 @@ builder.Services.AddAuthentication(options =>
 
 // TODO Ajouter SignalR
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<ChatBackgroundService>();
+builder.Services.AddHostedService<ChatBackgroundService>(p => p.GetService<ChatBackgroundService>());
 
 var app = builder.Build();
 

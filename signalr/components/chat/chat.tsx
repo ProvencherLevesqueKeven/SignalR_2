@@ -34,6 +34,15 @@ export default function ChatComponent({ hubConnection, onConnected }: ChatCompon
     hubConnection.on('NewMessage', (msg: string) => {
       setMessages(prev => [...prev, msg]);
     });
+    
+    hubConnection.on('NombreMessage', (channelId: number, nbMessages: number) => {
+      setChannelsList(prev => prev.map(channel => {
+        if (channel.id === channelId) {
+          return { ...channel, nbMessages: nbMessages };
+        }
+        return channel;
+      }));
+    });
 
     // TODO: Écouter le message pour mettre à jour la liste de channels
     hubConnection.on('ChannelsList', (channels: Channel[]) => {
@@ -42,6 +51,10 @@ export default function ChatComponent({ hubConnection, onConnected }: ChatCompon
     // TODO: Écouter le message pour quitter un channel (lorsque le channel est effacé)
     hubConnection.on('LeaveChannel', (message) => {
       setSelectedChannel(null);
+    });
+
+    hubConnection.on('MostPopularChannel', (messagesCount) => {
+      alert(`Vous êtes dans le canal le plus populaire avec ${messagesCount} messages`);
     });
     
     // Tous les handlers sont enregistrés : on peut maintenant démarrer la connexion.
@@ -58,6 +71,9 @@ export default function ChatComponent({ hubConnection, onConnected }: ChatCompon
     return () => {
       hubConnection.off('UsersList');
       hubConnection.off('NewMessage');
+      hubConnection.off('ChannelsList');
+      hubConnection.off('LeaveChannel');
+      hubConnection.off('MostPopularChannel');
     };
   }, [hubConnection, onConnected]);
 
@@ -158,7 +174,7 @@ export default function ChatComponent({ hubConnection, onConnected }: ChatCompon
                     }`}
                   onClick={() => joinChannel(channel)}
                 >
-                  {channel.title}
+                  {channel.title} ({channel.nbMessages})
                 </button>
                 <button
                   className={styles.deleteButton}

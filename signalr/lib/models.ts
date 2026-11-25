@@ -6,4 +6,5 @@ export interface UserEntry {
 export interface Channel {
   id: number;
   title: string;
+  nbMessages: number;
 }
